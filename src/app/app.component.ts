@@ -7,4 +7,9 @@ import { Component } from '@angular/core';
 })
 export class AppComponent {
   title = 'course-project';
+  showRecipe: boolean = true
+
+  setShowRecipe (value) {
+    this.showRecipe = value
+  }
 }
