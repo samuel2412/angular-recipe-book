@@ -31,4 +31,8 @@ export class RecipeService {
     getRecipes() {
         return [...this.recipes]
     }
+
+    getRecipe (index: number){
+        return {...this.recipes[index]}
+    }
 }
