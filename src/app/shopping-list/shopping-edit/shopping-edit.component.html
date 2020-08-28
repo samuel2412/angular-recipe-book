@@ -1,21 +1,38 @@
 <div class="row">
     <div class="col-xs-12">
-        <form>
+        <form (ngSubmit)="onSubmit(form)" #form="ngForm">
             <div class="row">
                 <div class="col-sm-5 form-group">
                     <label for="name">Name</label>
-                    <input #nameInput type="text" id="Name" name="name" class="form-control">
+                    <input type="text" id="Name" name="name" ngModel class="form-control" required>
                 </div>
                 <div class="col-sm-2 form-group">
                     <label for="amount">Amount</label>
-                    <input #amountInput type="number" id="amount" name="amount" class="form-control">
+                    <input
+                    class="form-control"
+                      type="number"
+                      id="amount"
+                      name="amount"
+                      ngModel
+                      required
+                      pattern="^[1-9]+[0-9]*$"
+                     >
                 </div>
             </div>
             <div class="row">
                 <div class="col-xs-12">
-                    <button class="btn btn-success" (click)="onAddItem(nameInput.value,amountInput.value)" type="submit">Add</button>
-                    <button class="btn btn-danger" type="button">Delete</button>
-                    <button class="btn btn-primary" type="button">Clear</button>
+                    <button class="btn btn-success" type="submit" [disabled]="form.invalid">
+                      {{ editMode ? 'Update' : 'Add' }}
+                    </button>
+                    <button
+                      class="btn btn-danger"
+                      type="button"
+                      (click)="onDelete()"
+                      *ngIf="editMode"
+                    >
+                      Delete
+                    </button>
+                    <button class="btn btn-primary" (click)="onClear()" type="button">Clear</button>
                 </div>
             </div>
         </form>
