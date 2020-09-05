@@ -4,7 +4,7 @@
         <hr>
         <ul class="list-group">
             <a
-                *ngFor="let ingredient of ingredients; index as index"
+                *ngFor="let ingredient of (ingredients | async).ingredients; index as index"
                 class="list-group-item"
                 style="cursor: pointer;"
                 (click)="onEditItem(index)"

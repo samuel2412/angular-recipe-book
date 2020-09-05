@@ -1,35 +1,23 @@
 import { Recipe } from './recipe.model';
 import { Ingredient } from '../shared/ingredient.model';
 import { Subject } from 'rxjs';
+import { Store } from '@ngrx/store';
+import { Injectable } from '@angular/core';
 
+import * as  ShoppingListActions from '../shopping-list/store/shopping-list.actions'
+import * as fromShoppingList from '../shopping-list/store/shopping-list.reducer'
 
+@Injectable()
 export class RecipeService {
   recipesChanged = new Subject<Recipe[]>()
   private recipes: Recipe[] = []
-    /* private recipes: Recipe[] = [
-        new Recipe(
-            'Burguer',
-            'cheese burguer with onions',
-            'https://f088b146830a59b5.cdn.gocache.net/uploads/noticias/2020/03/10/rf6288t949m0.jpg',
-            [
-                new Ingredient ('Meat',1),
-                new Ingredient ('Bread',1),
-                new Ingredient ('Onion',1),
-                new Ingredient ('Cheese',1)
-            ]
-        ),
-        new Recipe(
-            'Hot Dog',
-            'Bread, sausage and ketchup',
-            'https://img.cybercook.com.br/receitas/243/cachorro-quente-completo-1-623x350.jpeg',
-            [
-                new Ingredient ('sausage',1),
-                new Ingredient ('Bread',1),
-                new Ingredient ('Ketchup',1)
-            ]
-        )
-    ];
- */
+
+    constructor(private store: Store<fromShoppingList.AppState>){}
+
+    addIngredientsToShoppingList(ingredients: Ingredient[]){
+      this.store.dispatch(new ShoppingListActions.AddIngredients(ingredients))
+    }
+
     getRecipes() {
         return [...this.recipes]
     }
