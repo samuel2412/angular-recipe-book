@@ -60,7 +60,7 @@ const shoppingListReducer = (state: State = initialState, action: ShoppingListAc
         editIngredient: {...state.ingredients[action.payload]},
         editIngredientIndex: action.payload
       }
-    case ShoppingListActions.STOP_EDTI:
+    case ShoppingListActions.STOP_EDIT:
       return {
         ...state,
         editIngredient: null,

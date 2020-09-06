@@ -3,9 +3,12 @@ import { NgForm } from '@angular/forms';
 import { AuthService, AuthResponseData } from './auth.service'
 import { Observable, Subscription } from 'rxjs';
 import { Router } from '@angular/router';
+import { Store } from '@ngrx/store';
 
 import { AlertComponent } from '../shared/alert/alert.component'
 import { PlaceholderDirective } from '../shared/placeholder/placeholder.directive';
+import * as fromApp from '../store/app.reducer'
+import * as AuthActions from './store/auth.actions'
 
 @Component({
   selector: 'app-auth',
@@ -19,9 +22,21 @@ export class AuthComponent implements OnInit, OnDestroy {
   @ViewChild(PlaceholderDirective, {static: false}) alertHost: PlaceholderDirective
   private subscription: Subscription
 
-  constructor(private authService: AuthService, private router: Router, private componentFactory: ComponentFactoryResolver) { }
+  constructor(
+    private authService: AuthService,
+    private router: Router,
+    private componentFactory: ComponentFactoryResolver,
+    private store: Store<fromApp.AppState>
+  ) { }
 
   ngOnInit(): void {
+    this.store.select('auth').subscribe(authState => {
+      this.isLoading = authState.loading
+      this.error = authState.authError
+      if(this.error){
+        this.showErrorAlert(this.error)
+      }
+    })
   }
 
   ngOnDestroy(){
@@ -38,8 +53,11 @@ export class AuthComponent implements OnInit, OnDestroy {
     this.isLoading = true
     const { email, password } = form.value
 
-    let authObservable: Observable<AuthResponseData> = this.isLogin ? this.authService.login(email,password) :  this.authService.signup(email,password)
+    if(this.isLogin){
+      this.store.dispatch(new AuthActions.LoginStart({ email, password }))
+    } else {
 
+    /* const authObservable = this.authService.signup(email,password)
     authObservable.subscribe(responseData => {
       console.log(responseData)
       this.isLoading = false;
@@ -49,8 +67,8 @@ export class AuthComponent implements OnInit, OnDestroy {
       this.error = errorMessage
       this.showErrorAlert(errorMessage)
       this.isLoading = false;
-    })
-
+    }) */
+  }
     form.reset()
   }
 
