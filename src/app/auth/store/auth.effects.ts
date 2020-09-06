@@ -7,6 +7,8 @@ import { Router } from '@angular/router';
 
 import * as AuthActions from './auth.actions'
 import { environment } from '../../../environments/environment'
+import { User } from '../user.model';
+import { AuthService } from '../auth.service';
 
 export interface AuthResponseData {
   kind: string
@@ -18,9 +20,71 @@ export interface AuthResponseData {
   registered?: boolean
 }
 
+const handleAuthentication = (email: string, userId: string, token: string, expiresIn: number) => {
+  const expirationDate = new Date(new Date().getTime() + expiresIn * 1000)
+  const user = new User(email, userId, token, expirationDate)
+  localStorage.setItem('userData', JSON.stringify(user) )
+  return new AuthActions.AuthenticateSuccess({
+    email,
+    userId,
+    token,
+    expirationDate
+  })
+}
+
+const handleError = (errorResp: any) => {
+  let errorMessage = 'An unknow error occurred!'
+
+  if(!errorResp.error || !errorResp.error.error){
+    return of( new AuthActions.AuthenticateFail(errorMessage) )
+  }
+
+  switch(errorResp.error.error.message){
+    case 'EMAIL_EXISTS':
+      errorMessage = 'This email already exists'
+      break;
+    case 'EMAIL_NOT_FOUND':
+      errorMessage = 'This email does not exists'
+    break;
+    case 'INVALID_PASSWORD':
+      errorMessage = 'This password is not correct'
+    break;
+    default:
+      errorMessage = 'An unknow error occurred!'
+  }
+
+  return of( new AuthActions.AuthenticateFail( errorMessage ) )
+}
+
 @Injectable()
 export class AuthEffects {
-  constructor(private actions$: Actions, private http: HttpClient, private router: Router){}
+  constructor(private actions$: Actions, private http: HttpClient, private router: Router, private authService: AuthService){}
+
+
+  @Effect()
+  authSignup = this.actions$.pipe(
+    ofType( AuthActions.SIGNUP_START ),
+    switchMap( (signupAction: AuthActions.SignupStart ) => {
+      return this.http.post<AuthResponseData>(
+        `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${environment.firebaseAPIKey}`,
+        {
+          email: signupAction.payload.email,
+          password: signupAction.payload.password,
+          returnSecureToken: true
+        }
+      ).pipe(
+        tap((respData)=>{
+          this.authService.setLogoutTimer(+respData.expiresIn * 1000)
+        }),
+        map(respData => {
+          return handleAuthentication(respData.email,respData.localId,respData.idToken, +respData.expiresIn)
+        }),
+        catchError(errorResp => {
+          return handleError(errorResp)
+        })
+      )
+    })
+  )
 
   @Effect()
   authLogin = this.actions$.pipe(
@@ -34,47 +98,66 @@ export class AuthEffects {
           returnSecureToken: true
         }
       ).pipe(
+        tap((respData)=>{
+          this.authService.setLogoutTimer(+respData.expiresIn * 1000)
+        }),
         map(respData => {
-          const expirationDate = new Date(new Date().getTime() + +respData.expiresIn * 1000)
-          return new AuthActions.Login({
-            email: respData.email,
-            userId: respData.localId,
-            token: respData.idToken,
-            expirationDate
-           })
+          return handleAuthentication(respData.email,respData.localId,respData.idToken, +respData.expiresIn)
         }),
         catchError(errorResp => {
-          let errorMessage = 'An unknow error occurred!'
-
-          if(!errorResp.error || !errorResp.error.error){
-            return of( new AuthActions.LoginFail(errorMessage) )
-          }
-
-          switch(errorResp.error.error.message){
-            case 'EMAIL_EXISTS':
-              errorMessage = 'This email already exists'
-              break;
-            case 'EMAIL_NOT_FOUND':
-              errorMessage = 'This email does not exists'
-            break;
-            case 'INVALID_PASSWORD':
-              errorMessage = 'This password is not correct'
-            break;
-            default:
-              errorMessage = 'An unknow error occurred!'
-          }
-
-          return of( new AuthActions.LoginFail( errorMessage ) )
+          return handleError(errorResp)
         })
       )
     })
   )
 
   @Effect({dispatch: false})
-  authSuccess = this.actions$.pipe(
-    ofType(AuthActions.LOGIN),
+  authRedirect = this.actions$.pipe(
+    ofType(AuthActions.AUTHENTICATE_SUCCESS),
     tap(()=>{
       this.router.navigateByUrl('/')
+    })
+  )
+
+  @Effect()
+  autoLogin = this.actions$.pipe(
+    ofType(AuthActions.AUTO_LOGIN),
+    map(()=>{
+      const user:{
+        email: string,
+        id: string,
+        _token: string,
+        _tokenExpirationDate: string
+      } = JSON.parse(localStorage.getItem('userData'))
+      if(!user) return { type: 'dummy' }
+      const loadedUser = new User(
+        user.email,
+        user.id,
+        user._token,
+        new Date(user._tokenExpirationDate)
+      )
+      if(loadedUser.token){
+        //this.user.next(loadedUser)
+        const expiresIn = new Date(user._tokenExpirationDate).getTime() - new Date().getTime()
+        this.authService.setLogoutTimer(expiresIn * 1000)
+        return new AuthActions.AuthenticateSuccess({
+            email: loadedUser.email,
+            userId: loadedUser.id,
+            token: loadedUser.token,
+            expirationDate:  new Date(user._tokenExpirationDate)
+        })
+      }
+      return { type: 'dummy' }
+    })
+  )
+
+  @Effect({dispatch: false})
+  authLogout = this.actions$.pipe(
+    ofType(AuthActions.LOGOUT),
+    tap(()=>{
+      this.authService.clearLogoutTimer()
+      localStorage.removeItem('userData')
+      this.router.navigateByUrl('/auth')
     })
   )
 }

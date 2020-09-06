@@ -1,8 +1,6 @@
 import { Component, OnInit, ComponentFactoryResolver, ViewChild, OnDestroy } from '@angular/core';
 import { NgForm } from '@angular/forms';
-import { AuthService, AuthResponseData } from './auth.service'
-import { Observable, Subscription } from 'rxjs';
-import { Router } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { Store } from '@ngrx/store';
 
 import { AlertComponent } from '../shared/alert/alert.component'
@@ -21,16 +19,15 @@ export class AuthComponent implements OnInit, OnDestroy {
   error: string = null;
   @ViewChild(PlaceholderDirective, {static: false}) alertHost: PlaceholderDirective
   private subscription: Subscription
+  private storeSub: Subscription
 
   constructor(
-    private authService: AuthService,
-    private router: Router,
     private componentFactory: ComponentFactoryResolver,
     private store: Store<fromApp.AppState>
   ) { }
 
   ngOnInit(): void {
-    this.store.select('auth').subscribe(authState => {
+    this.storeSub = this.store.select('auth').subscribe(authState => {
       this.isLoading = authState.loading
       this.error = authState.authError
       if(this.error){
@@ -43,6 +40,7 @@ export class AuthComponent implements OnInit, OnDestroy {
     if(this.subscription){
       this.subscription.unsubscribe()
     }
+    this.storeSub.unsubscribe()
   }
 
   onSwitchMode(){
@@ -50,30 +48,18 @@ export class AuthComponent implements OnInit, OnDestroy {
   }
 
   onSubmit(form: NgForm){
-    this.isLoading = true
     const { email, password } = form.value
 
     if(this.isLogin){
-      this.store.dispatch(new AuthActions.LoginStart({ email, password }))
+      this.store.dispatch( new AuthActions.LoginStart({ email, password }) )
     } else {
-
-    /* const authObservable = this.authService.signup(email,password)
-    authObservable.subscribe(responseData => {
-      console.log(responseData)
-      this.isLoading = false;
-      this.router.navigateByUrl('/recipes')
-    }, errorMessage => {
-      console.log(errorMessage)
-      this.error = errorMessage
-      this.showErrorAlert(errorMessage)
-      this.isLoading = false;
-    }) */
-  }
+      this.store.dispatch( new AuthActions.SignupStart({ email, password }) )
+    }
     form.reset()
   }
 
   onHandleError(){
-    this.error = null
+    this.store.dispatch( new AuthActions.ClearError() )
   }
 
   private showErrorAlert(message: string){

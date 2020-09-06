@@ -16,13 +16,14 @@ const initialState: State = {
 const authReducer = (state = initialState, action: AuthActions.AuthActions ) => {
   switch (action.type) {
     case AuthActions.LOGIN_START:
+    case AuthActions.SIGNUP_START:
       return {
         ...state,
         authError: null,
         loading: true
       }
 
-    case AuthActions.LOGIN:
+    case AuthActions.AUTHENTICATE_SUCCESS:
       const user = new User(
         action.payload.email,
         action.payload.userId,
@@ -36,7 +37,7 @@ const authReducer = (state = initialState, action: AuthActions.AuthActions ) => 
         user
       }
 
-    case AuthActions.LOGIN_FAIL:
+    case AuthActions.AUTHENTICATE_FAIL:
       return {
         ...state,
         user: null,
@@ -49,6 +50,13 @@ const authReducer = (state = initialState, action: AuthActions.AuthActions ) => 
         ...state,
         authError: null,
         user: null
+      }
+
+    case AuthActions.CLEAR_ERROR:
+      return {
+        ...state,
+        authError: null
+
       }
 
     default:
